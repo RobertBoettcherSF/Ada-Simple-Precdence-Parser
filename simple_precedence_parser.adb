@@ -69,10 +69,10 @@ package body Simple_Precedence_Parser is
    is
       Max_Stack : constant := 1024;
       type Symbol_Stack is array (1 .. Max_Stack) of Symbol;
-      Stack : Symbol_Stack := (others => End_Marker);
+      Stack : Symbol_Stack := [others => End_Marker];
       Top   : Natural := 0;
 
-      Input_Idx : Positive := Positive'First;
+      Input_Idx : Positive;
       Current_Input : Symbol;
       Rel : Precedence_Relation;
       
@@ -132,8 +132,8 @@ package body Simple_Precedence_Parser is
             declare
                Handle_Start : Natural := 0;
                Internal_Rel : Precedence_Relation;
-               LHS          : Symbol := End_Marker;
-               RHS_Str      : String (1 .. Top);
+               LHS          : Symbol;
+               RHS_Str      : String (1 .. Top) := [others => End_Marker];
                RHS_Len      : Natural := 0;
             begin
                -- Find handle start by searching backwards for a 'Takes' relation
@@ -185,10 +185,10 @@ package body Simple_Precedence_Parser is
    is
       Max_Stack : constant := 1024;
       type Symbol_Stack is array (1 .. Max_Stack) of Symbol;
-      Stack : Symbol_Stack := (others => End_Marker);
+      Stack : Symbol_Stack := [others => End_Marker];
       Top   : Natural := 0;
 
-      Input_Idx : Positive := Positive'First;
+      Input_Idx : Positive;
       Current_Input : Symbol;
       Rel : Precedence_Relation;
 
@@ -249,7 +249,7 @@ package body Simple_Precedence_Parser is
             declare
                Handle_Start : Natural := 0;
                Internal_Rel : Precedence_Relation;
-               LHS          : Symbol := End_Marker;
+               LHS          : Symbol;
                RHS_Str      : Unbounded_String := Null_Unbounded_String;
             begin
                for I in reverse 2 .. Top loop
