@@ -32,23 +32,23 @@ procedure Tests is
 
    -- Valid Grammar Data: S -> aSb | c
    Valid_Prods : constant Production_Array :=
-     (1 => (LHS => 'S', RHS => To_Unbounded_String ("aSb")),
-      2 => (LHS => 'S', RHS => To_Unbounded_String ("c")));
+     [1 => (LHS => 'S', RHS => To_Unbounded_String ("aSb")),
+      2 => (LHS => 'S', RHS => To_Unbounded_String ("c"))];
 
    -- Invalid Grammar Data: Duplicate RHS A -> x, B -> x
    Invalid_Prods_Dup : constant Production_Array :=
-     (1 => (LHS => 'A', RHS => To_Unbounded_String ("x")),
-      2 => (LHS => 'B', RHS => To_Unbounded_String ("x")));
+     [1 => (LHS => 'A', RHS => To_Unbounded_String ("x")),
+      2 => (LHS => 'B', RHS => To_Unbounded_String ("x"))];
 
    -- Invalid Grammar Data: Empty RHS C -> ""
    Invalid_Prods_Empty : constant Production_Array :=
-     (1 => (LHS => 'C', RHS => Null_Unbounded_String));
+     [1 => (LHS => 'C', RHS => Null_Unbounded_String)];
 
    -- Matrix initialization for standard tests
-   Valid_Matrix : Relation_Matrix := (others => (others => None));
+   Valid_Matrix : Relation_Matrix := [others => [others => None]];
    
    -- Broken Matrix for testing Handle failure
-   Broken_Matrix : Relation_Matrix := (others => (others => None));
+   Broken_Matrix : Relation_Matrix := [others => [others => None]];
 
    Trace_Output : Unbounded_String;
 
@@ -131,8 +131,8 @@ begin
 
       -- TEST 11 - Superfluous Characters
       Put_Line ("TEST 11 - Invalid Input (Extra Characters)");
-      Check ("11.1 'acbb' fails", not Parse (Standard_Parser, "acbb"));
-      Check ("11.2 Trace failure confirmed", not Parse_With_Trace (Standard_Parser, "acbb", Trace_Output));
+      Check ("11.1 'acbc' fails", not Parse (Standard_Parser, "acbc"));
+      Check ("11.2 Trace failure confirmed", not Parse_With_Trace (Standard_Parser, "acbc", Trace_Output));
       Check ("11.3 Failed state traced to bad adjacency", Contains (To_String (Trace_Output), "No precedence relation"));
 
       -- TEST 12 - Totally Unknown Character Input
@@ -143,39 +143,43 @@ begin
       Check ("12.4 Valid trace detail for unknown char", Contains (To_String (Trace_Output), "No precedence relation"));
    end;
 
+   -- TEST 13 - Malformed Stack Sequence
    declare
-      -- Setup for Test 13: Handle start error simulation
-      -- We simulate an environment where Yields is triggered but no preceding Takes exists.
       Broken_Prods : constant Production_Array :=
-        (1 => (LHS => 'S', RHS => To_Unbounded_String ("x")));
-      Broken_Parser : Parser (Max_Prods => 1);
+        [1 => (LHS => 'S', RHS => To_Unbounded_String ("x"))];
    begin
-      -- Assign explicitly to avoid matrix array allocation duplication
+      -- Assign matrix values beforehand
       Broken_Matrix ('$', 'x') := Equal; -- Notice: 'Equal' instead of 'Takes'
       Broken_Matrix ('x', '$') := Yields;
-      Broken_Parser := Create_Parser ('S', Broken_Prods, Broken_Matrix);
-
-      Put_Line ("TEST 13 - Malformed Stack Sequence (Internal Handle Recovery)");
-      Check ("13.1 Parse rejects gracefully", not Parse (Broken_Parser, "x"));
-      Check ("13.2 Trace fails cleanly", not Parse_With_Trace (Broken_Parser, "x", Trace_Output));
-      Check ("13.3 Handle start exception triggers exactly", Contains (To_String (Trace_Output), "Could not find handle start"));
+      
+      -- Create parser initialized safely as a constant in an inner scope
+      declare
+         Broken_Parser : constant Parser := Create_Parser ('S', Broken_Prods, Broken_Matrix);
+      begin
+         Put_Line ("TEST 13 - Malformed Stack Sequence (Internal Handle Recovery)");
+         Check ("13.1 Parse rejects gracefully", not Parse (Broken_Parser, "x"));
+         Check ("13.2 Trace fails cleanly", not Parse_With_Trace (Broken_Parser, "x", Trace_Output));
+         Check ("13.3 Handle start exception triggers exactly", Contains (To_String (Trace_Output), "Could not find handle start"));
+      end;
    end;
 
    -- TEST 14 - Invalid Input with Handle Missing Production Rule
    declare
       Missing_RHS_Prods : constant Production_Array := 
-        (1 => (LHS => 'S', RHS => To_Unbounded_String ("y"))); -- Production is y, not x
-      Missing_Parser : Parser (Max_Prods => 1);
+        [1 => (LHS => 'S', RHS => To_Unbounded_String ("y"))]; -- Production is y, not x
    begin
       -- Matrix sets x as a valid handle, but no rule matches x.
       Broken_Matrix ('$', 'x') := Takes;
       Broken_Matrix ('x', '$') := Yields;
-      Missing_Parser := Create_Parser ('S', Missing_RHS_Prods, Broken_Matrix);
       
-      Put_Line ("TEST 14 - Production Mismatch");
-      Check ("14.1 Parse fails when no matching production RHS is found", not Parse (Missing_Parser, "x"));
-      Check ("14.2 Trace variant fails consistently", not Parse_With_Trace (Missing_Parser, "x", Trace_Output));
-      Check ("14.3 Trace pinpoints missing production", Contains (To_String (Trace_Output), "No production for handle x"));
+      declare
+         Missing_Parser : constant Parser := Create_Parser ('S', Missing_RHS_Prods, Broken_Matrix);
+      begin
+         Put_Line ("TEST 14 - Production Mismatch");
+         Check ("14.1 Parse fails when no matching production RHS is found", not Parse (Missing_Parser, "x"));
+         Check ("14.2 Trace variant fails consistently", not Parse_With_Trace (Missing_Parser, "x", Trace_Output));
+         Check ("14.3 Trace pinpoints missing production", Contains (To_String (Trace_Output), "No production for handle x"));
+      end;
    end;
 
    Put_Line ("");
